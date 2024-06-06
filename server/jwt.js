@@ -1,24 +1,33 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config(); // Load environment variables
+require('dotenv').config(); 
 
-const jwtmiddleware = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).send('Access denied. No token provided');
+const jwtAuthMiddleware = (req, res, next) => {
+    // first check request headers has authorization or not
+    const authorization = req.headers.authorization;
+    console.log("Token")
+    if (!authorization) return res.status(401).json({ error: 'Token Not Found' });
 
-    const token = authHeader.split(' ')[1];
-    if (!token) return res.status(401).send('Access denied. No token provided');
+    // Extract the JWT token from the request headers
+    const token = authorization.split(' ')[1];
+    if (!token) return res.status(200).json({ error: 'Unauthorized' });
 
     try {
+        // Verify the JWT token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Attach user information to the request object
         req.user = decoded;
         next();
     } catch (err) {
-        return res.status(401).send('Access denied. Invalid token');
+        console.error(err);
+        res.status(401).json({ error: 'Invalid token' });
     }
 };
 
+// Function to generate JWT token
 const generateToken = (userData) => {
-    return jwt.sign(userData, process.env.JWT_SECRET);
+    // Generate a new JWT token using user data
+    return jwt.sign(userData, process.env.JWT_SECRET, { expiresIn: '1h' }); // Token expires in 1 hour
 };
 
-module.exports = { jwtmiddleware, generateToken };
+module.exports = { jwtAuthMiddleware, generateToken };
